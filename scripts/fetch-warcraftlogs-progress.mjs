@@ -125,8 +125,8 @@ const reportsQuery = `
 const raceQuery = `
   query RageQuitRace($guildId: Int!, $zoneId: Int!) {
     progressRaceData {
-      normal: progressRace(guildID: $guildId, zoneID: $zoneId, difficulty: 3, size: 20)
-      heroic: progressRace(guildID: $guildId, zoneID: $zoneId, difficulty: 4, size: 20)
+      normal: progressRace(guildID: $guildId, zoneID: $zoneId, difficulty: 3)
+      heroic: progressRace(guildID: $guildId, zoneID: $zoneId, difficulty: 4)
       mythic: progressRace(guildID: $guildId, zoneID: $zoneId, difficulty: 5, size: 20)
     }
   }
