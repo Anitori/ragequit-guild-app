@@ -116,6 +116,16 @@ const reportsQuery = `
   }
 `;
 
+const raceQuery = `
+  query RageQuitRace($guildId: Int!, $zoneId: Int!) {
+    progressRaceData {
+      normal: progressRace(guildID: $guildId, zoneID: $zoneId, difficulty: 3, size: 20)
+      heroic: progressRace(guildID: $guildId, zoneID: $zoneId, difficulty: 4, size: 20)
+      mythic: progressRace(guildID: $guildId, zoneID: $zoneId, difficulty: 5, size: 20)
+    }
+  }
+`;
+
 async function fetchReports(accessToken) {
   const reports = [];
 
@@ -135,6 +145,11 @@ async function fetchReports(accessToken) {
   }
 
   return reports;
+}
+
+async function fetchProgressRace(accessToken) {
+  const data = await graphql(accessToken, raceQuery, { guildId, zoneId });
+  return data.progressRaceData ?? {};
 }
 
 function normalizePercent(value) {
@@ -300,10 +315,13 @@ async function main() {
   }
 
   const accessToken = await getAccessToken(clientId, clientSecret);
-  const [baseData, reports] = await Promise.all([
+  const [baseData, reports, progressRace] = await Promise.all([
     graphql(accessToken, baseQuery, { guildId, zoneId }),
     fetchReports(accessToken),
+    fetchProgressRace(accessToken),
   ]);
+
+  console.log(`Progress race payload sample: ${JSON.stringify(progressRace).slice(0, 5000)}`);
 
   await writeProgress(summarizeProgress(baseData, reports, fallback));
   console.log(`Wrote dynamic progress JSON from ${reports.length} reports.`);
