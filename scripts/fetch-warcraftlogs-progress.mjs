@@ -132,6 +132,14 @@ const raceQuery = `
   }
 `;
 
+const compositionQuery = `
+  query RageQuitEncounterComposition($guildId: Int!, $encounterId: Int!) {
+    progressRaceData {
+      detailedComposition(guildID: $guildId, encounterID: $encounterId, difficulty: 5, size: 20)
+    }
+  }
+`;
+
 async function fetchReports(accessToken) {
   const reports = [];
 
@@ -156,6 +164,11 @@ async function fetchReports(accessToken) {
 async function fetchProgressRace(accessToken) {
   const data = await graphql(accessToken, raceQuery, { guildId, zoneId });
   return data.progressRaceData ?? {};
+}
+
+async function fetchDetailedComposition(accessToken, encounterId) {
+  const data = await graphql(accessToken, compositionQuery, { guildId, encounterId });
+  return data.progressRaceData?.detailedComposition;
 }
 
 function normalizePercent(value) {
@@ -461,6 +474,12 @@ async function main() {
       return {};
     }),
   ]);
+  const chimaerusComposition = await fetchDetailedComposition(accessToken, 3306).catch((error) => {
+    console.warn(error instanceof Error ? error.message : 'Chimaerus detailed composition query failed.');
+    return undefined;
+  });
+
+  console.log(`Chimaerus detailed composition sample: ${JSON.stringify(chimaerusComposition).slice(0, 4000)}`);
 
   if (hasProgressRace(progressRace)) {
     await writeProgress(summarizeProgressFromRace(baseData, progressRace, fallback));
