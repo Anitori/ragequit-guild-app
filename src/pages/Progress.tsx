@@ -12,6 +12,7 @@ const bossStatusVariant: Record<BossStatus, StatusVariant> = {
 
 function BossCard({ boss }: { boss: BossProgress }) {
   const Icon = boss.status === 'Muerto' ? Trophy : boss.status === 'En progreso' ? Target : Skull;
+  const pullCount = typeof boss.pullCount === 'number' ? boss.pullCount.toLocaleString() : '-';
 
   return (
     <Card>
@@ -32,12 +33,16 @@ function BossCard({ boss }: { boss: BossProgress }) {
         <StatusBadge label={boss.status} variant={bossStatusVariant[boss.status]} />
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-        <div className="rounded-lg bg-black/20 p-3">
-          <p className="text-xs text-zinc-500">Mejor try</p>
+      <div className="mt-4 grid grid-cols-3 gap-2 text-sm">
+        <div className="rounded-lg bg-black/20 p-2 sm:p-3">
+          <p className="text-xs text-zinc-500">Trys</p>
+          <p className="mt-1 font-bold">{pullCount}</p>
+        </div>
+        <div className="rounded-lg bg-black/20 p-2 sm:p-3">
+          <p className="text-xs text-zinc-500">Mejor %</p>
           <p className="mt-1 font-bold">{boss.bestTry ?? '-'}</p>
         </div>
-        <div className="rounded-lg bg-black/20 p-3">
+        <div className="rounded-lg bg-black/20 p-2 sm:p-3">
           <p className="text-xs text-zinc-500">Kill</p>
           <p className="mt-1 font-bold">{boss.killDate ?? '-'}</p>
         </div>

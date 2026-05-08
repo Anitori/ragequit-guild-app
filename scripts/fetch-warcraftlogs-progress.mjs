@@ -292,6 +292,7 @@ function summarizeProgressFromRace(baseData, progressRace, fallback) {
       name: encounter.name,
       status: 'No intentado',
       difficulty: displayDifficulty,
+      pullCount,
     };
   });
   const latestKill = bosses
