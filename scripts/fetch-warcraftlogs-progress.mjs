@@ -78,6 +78,10 @@ const baseQuery = `
     guildData {
       guild(id: $guildId) {
         name
+        server {
+          slug
+          region { slug compactName }
+        }
         zoneRanking(zoneId: $zoneId) {
           progress(size: 20) {
             worldRank { number percentile color }
@@ -122,6 +126,44 @@ const reportsQuery = `
   }
 `;
 
+const reportsByNameQuery = `
+  query RageQuitReportsByName(
+    $guildName: String!,
+    $guildServerSlug: String!,
+    $guildServerRegion: String!,
+    $zoneId: Int!,
+    $limit: Int!,
+    $page: Int!
+  ) {
+    reportData {
+      reports(
+        guildName: $guildName,
+        guildServerSlug: $guildServerSlug,
+        guildServerRegion: $guildServerRegion,
+        zoneID: $zoneId,
+        limit: $limit,
+        page: $page
+      ) {
+        has_more_pages
+        data {
+          code
+          title
+          startTime
+          fights(translate: true) {
+            id
+            name
+            encounterID
+            difficulty
+            kill
+            bossPercentage
+            fightPercentage
+          }
+        }
+      }
+    }
+  }
+`;
+
 const raceQuery = `
   query RageQuitRace($guildId: Int!, $zoneId: Int!) {
     progressRaceData {
@@ -159,6 +201,19 @@ async function fetchReports(accessToken) {
   }
 
   return reports;
+}
+
+async function fetchReportsByName(accessToken, guild) {
+  const data = await graphql(accessToken, reportsByNameQuery, {
+    guildName: guild.name,
+    guildServerSlug: guild.server?.slug,
+    guildServerRegion: guild.server?.region?.slug ?? guild.server?.region?.compactName,
+    zoneId,
+    limit: 20,
+    page: 1,
+  });
+
+  return data.reportData?.reports;
 }
 
 async function fetchProgressRace(accessToken) {
@@ -480,6 +535,29 @@ async function main() {
   });
 
   console.log(`Chimaerus detailed composition sample: ${JSON.stringify(chimaerusComposition).slice(0, 4000)}`);
+  const reportsByName = await fetchReportsByName(accessToken, baseData.guildData.guild).catch((error) => {
+    console.warn(error instanceof Error ? error.message : 'Reports by name query failed.');
+    return undefined;
+  });
+  const reportSample = {
+    total: reportsByName?.data?.length ?? 0,
+    hasMore: reportsByName?.has_more_pages,
+    reports: (reportsByName?.data ?? []).slice(0, 5).map((report) => ({
+      code: report.code,
+      title: report.title,
+      fights: (report.fights ?? [])
+        .filter((fight) => Number(fight.difficulty) === 5 || /Chimaerus/i.test(fight.name ?? ''))
+        .map((fight) => ({
+          name: fight.name,
+          encounterID: fight.encounterID,
+          difficulty: fight.difficulty,
+          kill: fight.kill,
+          bossPercentage: fight.bossPercentage,
+          fightPercentage: fight.fightPercentage,
+        })),
+    })),
+  };
+  console.log(`Reports by name sample: ${JSON.stringify(reportSample).slice(0, 5000)}`);
 
   if (hasProgressRace(progressRace)) {
     await writeProgress(summarizeProgressFromRace(baseData, progressRace, fallback));
