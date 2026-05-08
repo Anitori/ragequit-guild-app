@@ -9,6 +9,16 @@ const overviewUrl = `https://www.warcraftlogs.com/guild/id/${guildId}`;
 const progressUrl = `https://www.warcraftlogs.com/guild/progress/${guildId}?zone=${zoneId}`;
 const tokenUrl = 'https://www.warcraftlogs.com/oauth/token';
 const graphqlUrl = 'https://www.warcraftlogs.com/api/v2/client';
+const manualBossOverrides = new Map([
+  [
+    3306,
+    {
+      status: 'En progreso',
+      difficulty: 'Mythic',
+      logUrl: progressUrl,
+    },
+  ],
+]);
 
 const difficultyById = new Map([
   [3, 'Normal'],
@@ -78,10 +88,6 @@ const baseQuery = `
     guildData {
       guild(id: $guildId) {
         name
-        server {
-          slug
-          region { slug compactName }
-        }
         zoneRanking(zoneId: $zoneId) {
           progress(size: 20) {
             worldRank { number percentile color }
@@ -126,59 +132,12 @@ const reportsQuery = `
   }
 `;
 
-const reportsByNameQuery = `
-  query RageQuitReportsByName(
-    $guildName: String!,
-    $guildServerSlug: String!,
-    $guildServerRegion: String!,
-    $zoneId: Int!,
-    $limit: Int!,
-    $page: Int!
-  ) {
-    reportData {
-      reports(
-        guildName: $guildName,
-        guildServerSlug: $guildServerSlug,
-        guildServerRegion: $guildServerRegion,
-        zoneID: $zoneId,
-        limit: $limit,
-        page: $page
-      ) {
-        has_more_pages
-        data {
-          code
-          title
-          startTime
-          fights(translate: true) {
-            id
-            name
-            encounterID
-            difficulty
-            kill
-            bossPercentage
-            fightPercentage
-          }
-        }
-      }
-    }
-  }
-`;
-
 const raceQuery = `
   query RageQuitRace($guildId: Int!, $zoneId: Int!) {
     progressRaceData {
       normal: progressRace(guildID: $guildId, zoneID: $zoneId, difficulty: 3)
       heroic: progressRace(guildID: $guildId, zoneID: $zoneId, difficulty: 4)
       mythic: progressRace(guildID: $guildId, zoneID: $zoneId, difficulty: 5, size: 20)
-      mythicAnySize: progressRace(guildID: $guildId, zoneID: $zoneId, difficulty: 5)
-    }
-  }
-`;
-
-const compositionQuery = `
-  query RageQuitEncounterComposition($guildId: Int!, $encounterId: Int!) {
-    progressRaceData {
-      detailedComposition(guildID: $guildId, encounterID: $encounterId, difficulty: 5, size: 20)
     }
   }
 `;
@@ -204,27 +163,9 @@ async function fetchReports(accessToken) {
   return reports;
 }
 
-async function fetchReportsByName(accessToken, guild) {
-  const data = await graphql(accessToken, reportsByNameQuery, {
-    guildName: guild.name,
-    guildServerSlug: guild.server?.slug,
-    guildServerRegion: guild.server?.region?.slug ?? guild.server?.region?.compactName,
-    zoneId,
-    limit: 20,
-    page: 1,
-  });
-
-  return data.reportData?.reports;
-}
-
 async function fetchProgressRace(accessToken) {
   const data = await graphql(accessToken, raceQuery, { guildId, zoneId });
   return data.progressRaceData ?? {};
-}
-
-async function fetchDetailedComposition(accessToken, encounterId) {
-  const data = await graphql(accessToken, compositionQuery, { guildId, encounterId });
-  return data.progressRaceData?.detailedComposition;
 }
 
 function normalizePercent(value) {
@@ -301,6 +242,35 @@ function selectDisplayRaceEntry(entriesByDifficulty) {
   };
 }
 
+function applyManualBossOverrides(bosses) {
+  return bosses.map((boss) => {
+    const override = manualBossOverrides.get(Number(boss.id));
+
+    if (!override || boss.status === 'Muerto') {
+      return boss;
+    }
+
+    const merged = {
+      ...boss,
+      ...override,
+    };
+
+    if (Number(boss.pullCount ?? 0) === 0 && !Object.hasOwn(override, 'pullCount')) {
+      delete merged.pullCount;
+    }
+
+    return merged;
+  });
+}
+
+function findCurrentBoss(bosses) {
+  return (
+    bosses.toReversed().find((boss) => boss.status === 'En progreso') ??
+    bosses.find((boss) => boss.status === 'No intentado') ??
+    bosses.at(-1)
+  );
+}
+
 function summarizeProgressFromRace(baseData, progressRace, fallback) {
   const zone = baseData.worldData?.zone;
   const guild = baseData.guildData?.guild;
@@ -325,7 +295,7 @@ function summarizeProgressFromRace(baseData, progressRace, fallback) {
   const { difficulty: displayDifficulty, entry: displayEntry } = selectDisplayRaceEntry(entriesByDifficulty);
   const displayEncounters =
     displayEntry?.encounters?.length ? displayEntry.encounters : (zone?.encounters ?? fallback.bosses);
-  const bosses = displayEncounters.map((encounter, index) => {
+  const bosses = applyManualBossOverrides(displayEncounters.map((encounter, index) => {
     const pullCount = Number(encounter.pullCount ?? 0);
     const bestPercent = normalizePercent(encounter.bestPercent);
     const isKilled = Boolean(encounter.isKilled);
@@ -363,14 +333,11 @@ function summarizeProgressFromRace(baseData, progressRace, fallback) {
       difficulty: displayDifficulty,
       pullCount,
     };
-  });
+  }));
   const latestKill = bosses
     .filter((boss) => boss.status === 'Muerto' && boss.killDate)
     .sort((a, b) => String(b.killDate).localeCompare(String(a.killDate)))[0];
-  const currentBoss =
-    bosses.find((boss) => boss.status === 'En progreso') ??
-    bosses.find((boss) => boss.status === 'No intentado') ??
-    bosses.at(-1);
+  const currentBoss = findCurrentBoss(bosses);
 
   return {
     ...fallback,
@@ -383,7 +350,7 @@ function summarizeProgressFromRace(baseData, progressRace, fallback) {
     bosses,
     generatedAt: new Date().toISOString(),
     source: 'warcraftlogs-api',
-    sourceNote: `Actualizado desde Warcraft Logs progressRace para ${guild?.name ?? 'RageQuit'}.`,
+    sourceNote: `Actualizado desde Warcraft Logs progressRace para ${guild?.name ?? 'RageQuit'} con overrides manuales.`,
     rankings: guild?.zoneRanking?.progress ?? undefined,
   };
 }
@@ -530,47 +497,6 @@ async function main() {
       return {};
     }),
   ]);
-  const chimaerusComposition = await fetchDetailedComposition(accessToken, 3306).catch((error) => {
-    console.warn(error instanceof Error ? error.message : 'Chimaerus detailed composition query failed.');
-    return undefined;
-  });
-
-  console.log(`Chimaerus detailed composition sample: ${JSON.stringify(chimaerusComposition).slice(0, 4000)}`);
-  const reportsByName = await fetchReportsByName(accessToken, baseData.guildData.guild).catch((error) => {
-    console.warn(error instanceof Error ? error.message : 'Reports by name query failed.');
-    return undefined;
-  });
-  const reportSample = {
-    total: reportsByName?.data?.length ?? 0,
-    hasMore: reportsByName?.has_more_pages,
-    reports: (reportsByName?.data ?? []).slice(0, 5).map((report) => ({
-      code: report.code,
-      title: report.title,
-      fights: (report.fights ?? [])
-        .filter((fight) => Number(fight.difficulty) === 5 || /Chimaerus/i.test(fight.name ?? ''))
-        .map((fight) => ({
-          name: fight.name,
-          encounterID: fight.encounterID,
-          difficulty: fight.difficulty,
-          kill: fight.kill,
-          bossPercentage: fight.bossPercentage,
-          fightPercentage: fight.fightPercentage,
-        })),
-    })),
-  };
-  console.log(`Reports by name sample: ${JSON.stringify(reportSample).slice(0, 5000)}`);
-  const mythicAnySizeEntry = findRaceEntry(progressRace, 'mythicAnySize');
-  const mythicAnySizeSample = {
-    killedCount: mythicAnySizeEntry?.killedCount,
-    encounters: (mythicAnySizeEntry?.encounters ?? []).map((encounter) => ({
-      id: encounter.id,
-      name: encounter.name,
-      isKilled: encounter.isKilled,
-      pullCount: encounter.pullCount,
-      bestPercentForDisplay: encounter.bestPercentForDisplay,
-    })),
-  };
-  console.log(`Mythic any-size progress sample: ${JSON.stringify(mythicAnySizeSample).slice(0, 4000)}`);
 
   if (hasProgressRace(progressRace)) {
     await writeProgress(summarizeProgressFromRace(baseData, progressRace, fallback));
