@@ -9,16 +9,6 @@ const overviewUrl = `https://www.warcraftlogs.com/guild/id/${guildId}`;
 const progressUrl = `https://www.warcraftlogs.com/guild/progress/${guildId}?zone=${zoneId}`;
 const tokenUrl = 'https://www.warcraftlogs.com/oauth/token';
 const graphqlUrl = 'https://www.warcraftlogs.com/api/v2/client';
-const manualBossOverrides = new Map([
-  [
-    3306,
-    {
-      status: 'En progreso',
-      difficulty: 'Mythic',
-      logUrl: progressUrl,
-    },
-  ],
-]);
 
 const difficultyById = new Map([
   [3, 'Normal'],
@@ -242,27 +232,6 @@ function selectDisplayRaceEntry(entriesByDifficulty) {
   };
 }
 
-function applyManualBossOverrides(bosses) {
-  return bosses.map((boss) => {
-    const override = manualBossOverrides.get(Number(boss.id));
-
-    if (!override || boss.status === 'Muerto') {
-      return boss;
-    }
-
-    const merged = {
-      ...boss,
-      ...override,
-    };
-
-    if (Number(boss.pullCount ?? 0) === 0 && !Object.hasOwn(override, 'pullCount')) {
-      delete merged.pullCount;
-    }
-
-    return merged;
-  });
-}
-
 function findCurrentBoss(bosses) {
   return (
     bosses.toReversed().find((boss) => boss.status === 'En progreso') ??
@@ -271,7 +240,91 @@ function findCurrentBoss(bosses) {
   );
 }
 
-function summarizeProgressFromRace(baseData, progressRace, fallback) {
+function summarizeReportsByEncounter(reports) {
+  const state = new Map();
+
+  for (const report of reports) {
+    for (const fight of report.fights ?? []) {
+      if (Number(fight.difficulty) !== 5) {
+        continue;
+      }
+
+      const encounterId = Number(fight.encounterID);
+
+      if (!encounterId) {
+        continue;
+      }
+
+      const current = state.get(encounterId) ?? {
+        pulls: 0,
+        bestRemaining: undefined,
+        bestTry: undefined,
+        bestUrl: undefined,
+        kill: undefined,
+      };
+      current.pulls += 1;
+
+      if (fight.kill) {
+        const killTime = report.startTime + fight.endTime;
+        if (!current.kill || killTime < current.kill.time) {
+          current.kill = {
+            time: killTime,
+            date: formatDate(report.startTime, fight.endTime),
+            url: reportFightUrl(report.code, fight.id),
+          };
+        }
+      } else {
+        const remaining = normalizePercent(fight.bossPercentage ?? fight.fightPercentage);
+
+        if (remaining !== undefined && (current.bestRemaining === undefined || remaining < current.bestRemaining)) {
+          current.bestRemaining = remaining;
+          current.bestTry = formatPercent(remaining);
+          current.bestUrl = reportFightUrl(report.code, fight.id);
+        }
+      }
+
+      state.set(encounterId, current);
+    }
+  }
+
+  return state;
+}
+
+function mergeBossReports(bosses, reportState) {
+  return bosses.map((boss) => {
+    const reportBoss = reportState.get(Number(boss.id));
+
+    if (!reportBoss) {
+      return boss;
+    }
+
+    if (reportBoss.kill) {
+      return {
+        ...boss,
+        status: 'Muerto',
+        difficulty: 'Mythic',
+        killDate: reportBoss.kill.date,
+        logUrl: reportBoss.kill.url,
+        pullCount: reportBoss.pulls,
+      };
+    }
+
+    if (reportBoss.pulls > 0) {
+      return {
+        ...boss,
+        status: 'En progreso',
+        difficulty: 'Mythic',
+        bestTry: reportBoss.bestTry ?? boss.bestTry,
+        logUrl: reportBoss.bestUrl ?? boss.logUrl ?? progressUrl,
+        pullCount: reportBoss.pulls,
+      };
+    }
+
+    return boss;
+  });
+}
+
+function summarizeProgressFromRace(baseData, progressRace, reports, fallback) {
   const zone = baseData.worldData?.zone;
   const guild = baseData.guildData?.guild;
   const entriesByDifficulty = new Map(
@@ -295,45 +348,49 @@ function summarizeProgressFromRace(baseData, progressRace, fallback) {
   const { difficulty: displayDifficulty, entry: displayEntry } = selectDisplayRaceEntry(entriesByDifficulty);
   const displayEncounters =
     displayEntry?.encounters?.length ? displayEntry.encounters : (zone?.encounters ?? fallback.bosses);
-  const bosses = applyManualBossOverrides(displayEncounters.map((encounter, index) => {
-    const pullCount = Number(encounter.pullCount ?? 0);
-    const bestPercent = normalizePercent(encounter.bestPercent);
-    const isKilled = Boolean(encounter.isKilled);
-    const inProgress = !isKilled && (pullCount > 0 || (bestPercent !== undefined && bestPercent < 100));
-    const id = String(encounter.id ?? `boss-${index + 1}`);
+  const reportState = summarizeReportsByEncounter(reports);
+  const bosses = mergeBossReports(
+    displayEncounters.map((encounter, index) => {
+      const pullCount = Number(encounter.pullCount ?? 0);
+      const bestPercent = normalizePercent(encounter.bestPercent);
+      const isKilled = Boolean(encounter.isKilled);
+      const inProgress = !isKilled && (pullCount > 0 || (bestPercent !== undefined && bestPercent < 100));
+      const id = String(encounter.id ?? `boss-${index + 1}`);
 
-    if (isKilled) {
+      if (isKilled) {
+        return {
+          id,
+          name: encounter.name,
+          status: 'Muerto',
+          difficulty: displayDifficulty,
+          killDate: formatTimestamp(encounter.killedAtTimestamp),
+          logUrl: progressUrl,
+          pullCount,
+        };
+      }
+
+      if (inProgress) {
+        return {
+          id,
+          name: encounter.name,
+          status: 'En progreso',
+          difficulty: displayDifficulty,
+          bestTry: encounter.bestPercentForDisplay ?? formatPercent(bestPercent),
+          logUrl: progressUrl,
+          pullCount,
+        };
+      }
+
       return {
         id,
         name: encounter.name,
-        status: 'Muerto',
+        status: 'No intentado',
         difficulty: displayDifficulty,
-        killDate: formatTimestamp(encounter.killedAtTimestamp),
-        logUrl: progressUrl,
         pullCount,
       };
-    }
-
-    if (inProgress) {
-      return {
-        id,
-        name: encounter.name,
-        status: 'En progreso',
-        difficulty: displayDifficulty,
-        bestTry: encounter.bestPercentForDisplay ?? formatPercent(bestPercent),
-        logUrl: progressUrl,
-        pullCount,
-      };
-    }
-
-    return {
-      id,
-      name: encounter.name,
-      status: 'No intentado',
-      difficulty: displayDifficulty,
-      pullCount,
-    };
-  }));
+    }),
+    reportState,
+  );
   const latestKill = bosses
     .filter((boss) => boss.status === 'Muerto' && boss.killDate)
     .sort((a, b) => String(b.killDate).localeCompare(String(a.killDate)))[0];
@@ -350,7 +407,7 @@ function summarizeProgressFromRace(baseData, progressRace, fallback) {
     bosses,
     generatedAt: new Date().toISOString(),
     source: 'warcraftlogs-api',
-    sourceNote: `Actualizado desde Warcraft Logs progressRace para ${guild?.name ?? 'RageQuit'} con overrides manuales.`,
+    sourceNote: `Actualizado desde Warcraft Logs progressRace y reports de guild para ${guild?.name ?? 'RageQuit'}.`,
     rankings: guild?.zoneRanking?.progress ?? undefined,
   };
 }
@@ -490,21 +547,24 @@ async function main() {
   }
 
   const accessToken = await getAccessToken(clientId, clientSecret);
-  const [baseData, progressRace] = await Promise.all([
+  const [baseData, progressRace, reports] = await Promise.all([
     graphql(accessToken, baseQuery, { guildId, zoneId }),
     fetchProgressRace(accessToken).catch((error) => {
       console.warn(error instanceof Error ? error.message : 'Progress race query failed.');
       return {};
     }),
+    fetchReports(accessToken).catch((error) => {
+      console.warn(error instanceof Error ? error.message : 'Reports query failed.');
+      return [];
+    }),
   ]);
 
   if (hasProgressRace(progressRace)) {
-    await writeProgress(summarizeProgressFromRace(baseData, progressRace, fallback));
-    console.log('Wrote dynamic progress JSON from progressRace.');
+    await writeProgress(summarizeProgressFromRace(baseData, progressRace, reports, fallback));
+    console.log(`Wrote dynamic progress JSON from progressRace plus ${reports.length} reports.`);
     return;
   }
 
-  const reports = await fetchReports(accessToken);
   await writeProgress(summarizeProgress(baseData, reports, fallback));
   console.log(`Wrote dynamic progress JSON from ${reports.length} reports.`);
 }
