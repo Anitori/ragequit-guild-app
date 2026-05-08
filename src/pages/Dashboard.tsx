@@ -13,6 +13,7 @@ import { StatusBadge } from '../components/StatusBadge';
 import { importantLinks } from '../data/links';
 import { useRaidProgress } from '../hooks/useRaidProgress';
 import type { Navigate } from '../types/navigation';
+import { getNextRaidLabel, raidScheduleLabel } from '../utils/raidSchedule';
 
 const appIconUrl = `${import.meta.env.BASE_URL}icons/icon.svg`;
 
@@ -28,6 +29,7 @@ export function Dashboard({ navigate }: { navigate: Navigate }) {
   const mythicProgress = raidProgress.progress.find((item) => item.difficulty === 'Mythic');
   const currentBoss = raidProgress.bosses.find((boss) => boss.name === raidProgress.currentBoss);
   const currentBossBestTry = currentBoss?.bestTry ?? '-';
+  const nextRaid = getNextRaidLabel();
   const progressText = raidProgress.progress
     .map((item) => `${item.difficulty} ${item.killed}/${item.total}`)
     .join(' | ');
@@ -57,12 +59,12 @@ export function Dashboard({ navigate }: { navigate: Navigate }) {
 
           <div className="relative mt-5 grid grid-cols-2 gap-3">
             <div className="rounded-lg border border-white/10 bg-black/20 p-3">
-              <p className="text-xs text-zinc-400">Proximo raid</p>
-              <p className="mt-1 font-bold text-zinc-50">{raidProgress.nextRaid}</p>
+              <p className="text-xs text-zinc-400">Próxima raid</p>
+              <p className="mt-1 font-bold text-zinc-50">{nextRaid}</p>
             </div>
             <div className="rounded-lg border border-white/10 bg-black/20 p-3">
               <p className="text-xs text-zinc-400">Horario</p>
-              <p className="mt-1 font-bold text-zinc-50">{raidProgress.schedule}</p>
+              <p className="mt-1 font-bold text-zinc-50">{raidScheduleLabel}</p>
             </div>
           </div>
         </div>

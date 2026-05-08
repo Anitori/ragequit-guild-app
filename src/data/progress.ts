@@ -8,8 +8,8 @@ export const progressJsonUrl = `${import.meta.env.BASE_URL}data/progress.json`;
 // TODO: Leer progress desde Warcraft Logs API/GraphQL con backend u OAuth, no desde scraping client-side.
 export const raidProgress: RaidProgress = {
   raidName: 'Manaforge Omega',
-  schedule: 'Martes y miercoles',
-  nextRaid: 'Miercoles 21:30 ST',
+  schedule: 'Martes y miércoles',
+  nextRaid: 'Martes 20:00 ST',
   currentBoss: 'Boss 3',
   lastKill: 'Boss 2',
   warcraftLogsProgressUrl: warcraftLogsGuildProgressUrl,

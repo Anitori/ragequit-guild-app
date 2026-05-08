@@ -14,6 +14,6 @@ export const recruitmentNeeds: RecruitmentNeed[] = [
 
 export const recruitmentCopy = {
   applyUrl: 'https://forms.gle/',
-  schedule: 'Martes y miercoles',
+  schedule: 'Martes y miércoles',
   expectation: 'Buscamos jugadores consistentes, preparados y con ganas de progresar sin drama.',
 };
