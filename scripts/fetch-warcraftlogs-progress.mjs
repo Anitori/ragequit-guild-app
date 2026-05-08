@@ -170,6 +170,7 @@ const raceQuery = `
       normal: progressRace(guildID: $guildId, zoneID: $zoneId, difficulty: 3)
       heroic: progressRace(guildID: $guildId, zoneID: $zoneId, difficulty: 4)
       mythic: progressRace(guildID: $guildId, zoneID: $zoneId, difficulty: 5, size: 20)
+      mythicAnySize: progressRace(guildID: $guildId, zoneID: $zoneId, difficulty: 5)
     }
   }
 `;
@@ -558,6 +559,18 @@ async function main() {
     })),
   };
   console.log(`Reports by name sample: ${JSON.stringify(reportSample).slice(0, 5000)}`);
+  const mythicAnySizeEntry = findRaceEntry(progressRace, 'mythicAnySize');
+  const mythicAnySizeSample = {
+    killedCount: mythicAnySizeEntry?.killedCount,
+    encounters: (mythicAnySizeEntry?.encounters ?? []).map((encounter) => ({
+      id: encounter.id,
+      name: encounter.name,
+      isKilled: encounter.isKilled,
+      pullCount: encounter.pullCount,
+      bestPercentForDisplay: encounter.bestPercentForDisplay,
+    })),
+  };
+  console.log(`Mythic any-size progress sample: ${JSON.stringify(mythicAnySizeSample).slice(0, 4000)}`);
 
   if (hasProgressRace(progressRace)) {
     await writeProgress(summarizeProgressFromRace(baseData, progressRace, fallback));
