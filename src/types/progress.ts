@@ -8,6 +8,18 @@ export interface DifficultyProgress {
   total: number;
 }
 
+export interface RankPosition {
+  number: number;
+  percentile?: number | null;
+  color?: string;
+}
+
+export interface ProgressRankings {
+  worldRank?: RankPosition | null;
+  regionRank?: RankPosition | null;
+  serverRank?: RankPosition | null;
+}
+
 export interface BossProgress {
   id: string;
   name: string;
@@ -16,6 +28,7 @@ export interface BossProgress {
   bestTry?: string;
   killDate?: string;
   logUrl?: string;
+  pullCount?: number;
 }
 
 export interface RaidProgress {
@@ -29,4 +42,8 @@ export interface RaidProgress {
   progress: DifficultyProgress[];
   bosses: BossProgress[];
   notices: string[];
+  generatedAt?: string;
+  source?: 'local' | 'warcraftlogs-api' | 'fallback';
+  sourceNote?: string;
+  rankings?: ProgressRankings;
 }

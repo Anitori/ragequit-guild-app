@@ -11,7 +11,7 @@ import {
 import { Card } from '../components/Card';
 import { StatusBadge } from '../components/StatusBadge';
 import { importantLinks } from '../data/links';
-import { raidProgress } from '../data/progress';
+import { useRaidProgress } from '../hooks/useRaidProgress';
 import type { Navigate } from '../types/navigation';
 
 const appIconUrl = `${import.meta.env.BASE_URL}icons/icon.svg`;
@@ -24,6 +24,7 @@ const quickActions = [
 ] as const;
 
 export function Dashboard({ navigate }: { navigate: Navigate }) {
+  const { progress: raidProgress } = useRaidProgress();
   const mythicProgress = raidProgress.progress.find((item) => item.difficulty === 'Mythic');
   const progressText = raidProgress.progress
     .map((item) => `${item.difficulty} ${item.killed}/${item.total}`)

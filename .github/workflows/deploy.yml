@@ -3,6 +3,8 @@ name: Deploy PWA to GitHub Pages
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: "17 */2 * * *"
   workflow_dispatch:
 
 permissions:
@@ -17,6 +19,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,6 +33,12 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Fetch Warcraft Logs progress
+        run: npm run fetch:progress
+        env:
+          WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+          WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
 
       - name: Build
         run: npm run build
@@ -44,6 +54,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Deploy to GitHub Pages
         id: deployment

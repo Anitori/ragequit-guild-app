@@ -3,6 +3,7 @@ import type { RaidProgress } from '../types/progress';
 export const warcraftLogsGuildOverviewUrl = 'https://www.warcraftlogs.com/guild/id/702025';
 export const warcraftLogsGuildProgressUrl =
   'https://www.warcraftlogs.com/guild/progress/702025?zone=46';
+export const progressJsonUrl = `${import.meta.env.BASE_URL}data/progress.json`;
 
 // TODO: Leer progress desde Warcraft Logs API/GraphQL con backend u OAuth, no desde scraping client-side.
 export const raidProgress: RaidProgress = {
@@ -55,4 +56,20 @@ export const raidProgress: RaidProgress = {
     { id: 'boss-7', name: 'Boss 7', status: 'No intentado' },
     { id: 'boss-8', name: 'Boss 8', status: 'No intentado' },
   ],
+  generatedAt: new Date(0).toISOString(),
+  source: 'local',
+  sourceNote: 'Fallback local incluido en la app.',
 };
+
+export async function loadRaidProgress(): Promise<RaidProgress> {
+  const response = await fetch(progressJsonUrl, { cache: 'no-store' });
+
+  if (!response.ok) {
+    throw new Error(`Progress JSON respondio ${response.status}`);
+  }
+
+  return {
+    ...raidProgress,
+    ...(await response.json()),
+  };
+}

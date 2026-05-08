@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ragequit-guild-app-v2';
+const CACHE_NAME = 'ragequit-guild-app-v3';
 const APP_SHELL = [
   './',
   'index.html',
@@ -64,6 +64,23 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => caches.match(indexUrl).then((cached) => cached || caches.match(fromScope('./')))),
+    );
+    return;
+  }
+
+  if (requestUrl.origin === self.location.origin && requestUrl.pathname.endsWith('/data/progress.json')) {
+    event.respondWith(
+      fetch(request, { cache: 'no-store' })
+        .then((response) => {
+          if (!response || response.status !== 200) {
+            return response;
+          }
+
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          return response;
+        })
+        .catch(() => caches.match(request)),
     );
     return;
   }

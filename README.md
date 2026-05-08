@@ -39,9 +39,16 @@ Links configurados:
 - Guild overview: `https://www.warcraftlogs.com/guild/id/702025`
 - Raid progress: `https://www.warcraftlogs.com/guild/progress/702025?zone=46`
 
-El progress automatico desde Warcraft Logs queda pendiente para una integracion con
-API/GraphQL y backend/OAuth. La pagina publica puede presentar challenge anti-bot,
-por lo que la app no intenta hacer scraping desde el cliente.
+El progress dinamico se genera en GitHub Actions cada 2 horas con Warcraft Logs
+API/GraphQL y queda publicado como `data/progress.json`.
+
+Para habilitar datos reales, crear un OAuth client en Warcraft Logs y agregar estos
+secrets al repo:
+
+- `WCL_CLIENT_ID`
+- `WCL_CLIENT_SECRET`
+
+Si los secrets no existen o la API falla, el workflow publica el fallback local.
 
 ## Integraciones futuras
 

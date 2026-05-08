@@ -1,7 +1,7 @@
 import { ExternalLink, FileBarChart, Skull, Target, Trophy } from 'lucide-react';
 import { Card } from '../components/Card';
 import { StatusBadge, type StatusVariant } from '../components/StatusBadge';
-import { raidProgress } from '../data/progress';
+import { useRaidProgress } from '../hooks/useRaidProgress';
 import type { BossProgress, BossStatus } from '../types/progress';
 
 const bossStatusVariant: Record<BossStatus, StatusVariant> = {
@@ -54,6 +54,8 @@ function BossCard({ boss }: { boss: BossProgress }) {
 }
 
 export function Progress() {
+  const { progress: raidProgress, isLoading, error } = useRaidProgress();
+
   return (
     <div className="space-y-4">
       <Card>
@@ -72,6 +74,33 @@ export function Progress() {
           Ultimo kill: <span className="font-semibold text-zinc-200">{raidProgress.lastKill}</span> | Progress:{' '}
           <span className="font-semibold text-zinc-200">{raidProgress.currentBoss}</span>
         </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+          <StatusBadge
+            label={raidProgress.source === 'warcraftlogs-api' ? 'Warcraft Logs API' : 'Fallback'}
+            variant={raidProgress.source === 'warcraftlogs-api' ? 'active' : 'trial'}
+          />
+          {isLoading && <span>Actualizando progress...</span>}
+          {!isLoading && raidProgress.generatedAt && (
+            <span>Actualizado: {new Date(raidProgress.generatedAt).toLocaleString()}</span>
+          )}
+          {!isLoading && error && <span>{error}</span>}
+        </div>
+        {raidProgress.rankings && (
+          <div className="mt-4 grid grid-cols-3 gap-2 text-center text-sm">
+            <div className="rounded-lg bg-black/20 p-2">
+              <p className="text-xs text-zinc-500">World</p>
+              <p className="font-bold">#{raidProgress.rankings.worldRank?.number ?? '-'}</p>
+            </div>
+            <div className="rounded-lg bg-black/20 p-2">
+              <p className="text-xs text-zinc-500">Region</p>
+              <p className="font-bold">#{raidProgress.rankings.regionRank?.number ?? '-'}</p>
+            </div>
+            <div className="rounded-lg bg-black/20 p-2">
+              <p className="text-xs text-zinc-500">Realm</p>
+              <p className="font-bold">#{raidProgress.rankings.serverRank?.number ?? '-'}</p>
+            </div>
+          </div>
+        )}
         <div className="mt-4 flex flex-wrap gap-2">
           {raidProgress.warcraftLogsProgressUrl && (
             <a
