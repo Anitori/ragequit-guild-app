@@ -2,8 +2,8 @@ import { readFile, writeFile } from 'node:fs/promises';
 
 const guildId = 702025;
 const zoneId = 46;
-const reportLimit = 100;
-const maxReportPages = 5;
+const reportLimit = 50;
+const maxReportPages = 10;
 const outputPath = 'public/data/progress.json';
 const overviewUrl = `https://www.warcraftlogs.com/guild/id/${guildId}`;
 const progressUrl = `https://www.warcraftlogs.com/guild/progress/${guildId}?zone=${zoneId}`;
