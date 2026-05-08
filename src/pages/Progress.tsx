@@ -22,7 +22,11 @@ function BossCard({ boss }: { boss: BossProgress }) {
           </div>
           <div className="min-w-0">
             <h3 className="truncate text-lg font-black">{boss.name}</h3>
-            <p className="mt-1 text-sm text-zinc-400">{boss.difficulty ?? 'Mythic pendiente'}</p>
+            <p className="mt-1 text-sm text-zinc-400">
+              {boss.status === 'No intentado'
+                ? `${boss.difficulty ?? 'Mythic'} pendiente`
+                : boss.difficulty ?? 'Mythic'}
+            </p>
           </div>
         </div>
         <StatusBadge label={boss.status} variant={bossStatusVariant[boss.status]} />
