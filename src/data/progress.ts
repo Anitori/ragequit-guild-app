@@ -20,10 +20,10 @@ export const raidProgress: RaidProgress = {
     { difficulty: 'Mythic', killed: 2, total: 8 },
   ],
   notices: [
-    'Confirmar asistencia antes del raid',
+    'Recorda encantar tu equipo',
     'Traer consumibles',
-    'Revisar estrategia del boss actual',
-    'Actualizar personaje en el roster si cambio ilvl/spec',
+    'Actualizar addons',
+    'Llegar a horario',
   ],
   bosses: [
     {
