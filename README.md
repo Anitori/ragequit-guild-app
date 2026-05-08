@@ -23,9 +23,17 @@ La app queda lista para GitHub Pages. En el repo, activar:
 GitHub Actions compila `dist/` y publica la app por HTTPS. En Android/iPhone,
 abrir la URL publicada y usar `Agregar a pantalla principal` o `Instalar app`.
 
+## Roster
+
+El roster intenta cargar la pestaña `raw_data` del Google Sheet de WoW Audit:
+
+`https://docs.google.com/spreadsheets/d/1OUjSr5QwAuPJ9NMTbxH7etOj9-_SJFQxEpVVMLyeYXA/`
+
+Si Google Sheets no responde, la app usa el ultimo roster cacheado en el navegador
+o el mock local de `src/data/roster.ts`.
+
 ## Integraciones futuras
 
-- Google Sheets para `src/data/roster.ts`
 - Raider.IO o Blizzard API para `src/data/progress.ts`
 - Warcraft Logs para links de kills y wipes
 - Discord OAuth para login de officers

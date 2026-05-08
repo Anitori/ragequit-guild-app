@@ -1,13 +1,15 @@
 import { Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card } from '../components/Card';
 import { RoleBadge } from '../components/RoleBadge';
 import { StatusBadge, type StatusVariant } from '../components/StatusBadge';
-import { roster } from '../data/roster';
+import { loadRosterFromGoogleSheet, roster } from '../data/roster';
 import type { PlayerStatus, Role, RosterMember, WowClass } from '../types/roster';
 import { cn } from '../utils/classNames';
 
 type FilterValue<T extends string> = 'Todos' | T;
+
+const rosterCacheKey = 'ragequit:last-good-roster';
 
 const roleOptions: Array<FilterValue<Role>> = ['Todos', 'Tank', 'Healer', 'DPS'];
 const statusOptions: Array<FilterValue<PlayerStatus>> = [
@@ -27,10 +29,15 @@ const statusVariant: Record<PlayerStatus, StatusVariant> = {
 
 const classText: Record<WowClass, string> = {
   'Death Knight': 'text-rose-200',
+  'Demon Hunter': 'text-fuchsia-200',
   Druid: 'text-orange-200',
+  Evoker: 'text-emerald-200',
+  Hunter: 'text-lime-200',
   Mage: 'text-cyan-200',
+  Monk: 'text-emerald-100',
   Paladin: 'text-pink-200',
   Priest: 'text-zinc-100',
+  Rogue: 'text-yellow-200',
   Shaman: 'text-blue-200',
   Warlock: 'text-violet-200',
   Warrior: 'text-amber-200',
@@ -76,33 +83,96 @@ function RosterCard({ member }: { member: RosterMember }) {
 }
 
 export function Roster() {
+  const [members, setMembers] = useState<RosterMember[]>(roster);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [sourceLabel, setSourceLabel] = useState('Datos locales');
+  const [refreshedAt, setRefreshedAt] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [role, setRole] = useState<FilterValue<Role>>('Todos');
   const [className, setClassName] = useState<FilterValue<WowClass>>('Todos');
   const [status, setStatus] = useState<FilterValue<PlayerStatus>>('Todos');
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const cached = window.localStorage.getItem(rosterCacheKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached) as {
+          members: RosterMember[];
+          refreshedAt?: string;
+        };
+        if (Array.isArray(parsed.members) && parsed.members.length > 0) {
+          setMembers(parsed.members);
+          setRefreshedAt(parsed.refreshedAt ?? null);
+          setSourceLabel('Cache local');
+        }
+      } catch {
+        window.localStorage.removeItem(rosterCacheKey);
+      }
+    }
+
+    loadRosterFromGoogleSheet()
+      .then((result) => {
+        if (!isMounted) {
+          return;
+        }
+
+        if (result.members.length === 0) {
+          throw new Error('El Sheet no devolvio miembros validos');
+        }
+
+        setMembers(result.members);
+        setRefreshedAt(result.refreshedAt ?? null);
+        setSourceLabel('Google Sheets');
+        setLoadError(null);
+        window.localStorage.setItem(
+          rosterCacheKey,
+          JSON.stringify({ members: result.members, refreshedAt: result.refreshedAt }),
+        );
+      })
+      .catch((error: unknown) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setLoadError(error instanceof Error ? error.message : 'No se pudo cargar Google Sheets');
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const classOptions = useMemo(
-    () => ['Todos', ...Array.from(new Set(roster.map((member) => member.className))).sort()] as Array<
+    () => ['Todos', ...Array.from(new Set(members.map((member) => member.className))).sort()] as Array<
       FilterValue<WowClass>
     >,
-    [],
+    [members],
   );
 
   const filteredRoster = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
-    return roster.filter((member) => {
+    return members.filter((member) => {
       const matchesQuery =
         normalizedQuery.length === 0 ||
         member.characterName.toLowerCase().includes(normalizedQuery) ||
-        member.discordName?.toLowerCase().includes(normalizedQuery);
+        member.discordName?.toLowerCase().includes(normalizedQuery) ||
+        member.realm?.toLowerCase().includes(normalizedQuery);
       const matchesRole = role === 'Todos' || member.role === role;
       const matchesClass = className === 'Todos' || member.className === className;
       const matchesStatus = status === 'Todos' || member.status === status;
 
       return matchesQuery && matchesRole && matchesClass && matchesStatus;
     });
-  }, [className, query, role, status]);
+  }, [className, members, query, role, status]);
 
   return (
     <div className="space-y-4">
@@ -153,11 +223,18 @@ export function Roster() {
             ))}
           </select>
         </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+          <StatusBadge label={sourceLabel} variant={loadError ? 'trial' : 'active'} />
+          {isLoading && <span>Cargando roster actualizado...</span>}
+          {!isLoading && refreshedAt && <span>Actualizado: {refreshedAt}</span>}
+          {!isLoading && loadError && <span>Fallback activo: {loadError}</span>}
+        </div>
       </Card>
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-zinc-400">
-          {filteredRoster.length} de {roster.length} jugadores
+          {filteredRoster.length} de {members.length} jugadores
         </p>
       </div>
 
