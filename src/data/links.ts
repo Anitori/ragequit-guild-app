@@ -1,6 +1,11 @@
 import type { ImportantLink } from '../types/links';
+import { googleRosterCsvUrl } from './roster';
+import { warcraftLogsGuildOverviewUrl, warcraftLogsGuildProgressUrl } from './progress';
 
-// TODO: Actualizar URLs reales de Discord, Warcraft Logs, Raider.IO y Google Sheets.
+const googleRosterSheetUrl =
+  'https://docs.google.com/spreadsheets/d/1OUjSr5QwAuPJ9NMTbxH7etOj9-_SJFQxEpVVMLyeYXA/edit?gid=997148295#gid=997148295';
+
+// TODO: Actualizar URLs reales de Discord, Raider.IO, calendario y apply cuando esten definidos.
 export const importantLinks: ImportantLink[] = [
   {
     id: 'discord',
@@ -11,9 +16,16 @@ export const importantLinks: ImportantLink[] = [
   },
   {
     id: 'logs',
-    title: 'Warcraft Logs',
-    description: 'Logs de kills, wipes y revisiones',
-    url: 'https://www.warcraftlogs.com/',
+    title: 'Warcraft Logs Overview',
+    description: 'Overview publico de la guild',
+    url: warcraftLogsGuildOverviewUrl,
+    category: 'Raid',
+  },
+  {
+    id: 'wcl-progress',
+    title: 'Warcraft Logs Progress',
+    description: 'Progress oficial de la raid actual',
+    url: warcraftLogsGuildProgressUrl,
     category: 'Raid',
   },
   {
@@ -26,8 +38,15 @@ export const importantLinks: ImportantLink[] = [
   {
     id: 'sheet',
     title: 'Google Sheet del roster',
-    description: 'Roster editable y asistencia',
-    url: 'https://docs.google.com/spreadsheets/',
+    description: 'Roster actualizado desde WoW Audit',
+    url: googleRosterSheetUrl,
+    category: 'Raid',
+  },
+  {
+    id: 'sheet-csv',
+    title: 'Roster CSV',
+    description: 'Fuente publica usada por la app',
+    url: googleRosterCsvUrl,
     category: 'Raid',
   },
   {

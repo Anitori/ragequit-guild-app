@@ -32,6 +32,17 @@ El roster intenta cargar la pestaña `raw_data` del Google Sheet de WoW Audit:
 Si Google Sheets no responde, la app usa el ultimo roster cacheado en el navegador
 o el mock local de `src/data/roster.ts`.
 
+## Warcraft Logs
+
+Links configurados:
+
+- Guild overview: `https://www.warcraftlogs.com/guild/id/702025`
+- Raid progress: `https://www.warcraftlogs.com/guild/progress/702025?zone=46`
+
+El progress automatico desde Warcraft Logs queda pendiente para una integracion con
+API/GraphQL y backend/OAuth. La pagina publica puede presentar challenge anti-bot,
+por lo que la app no intenta hacer scraping desde el cliente.
+
 ## Integraciones futuras
 
 - Raider.IO o Blizzard API para `src/data/progress.ts`

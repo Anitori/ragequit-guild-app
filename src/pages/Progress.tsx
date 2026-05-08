@@ -1,4 +1,4 @@
-import { ExternalLink, Skull, Target, Trophy } from 'lucide-react';
+import { ExternalLink, FileBarChart, Skull, Target, Trophy } from 'lucide-react';
 import { Card } from '../components/Card';
 import { StatusBadge, type StatusVariant } from '../components/StatusBadge';
 import { raidProgress } from '../data/progress';
@@ -57,12 +57,43 @@ export function Progress() {
   return (
     <div className="space-y-4">
       <Card>
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-forge-200">Raid actual</p>
-        <h2 className="mt-1 text-2xl font-black">{raidProgress.raidName}</h2>
+        <div className="flex items-start gap-3">
+          <div className="grid size-11 shrink-0 place-items-center rounded-lg border border-white/10 bg-black/20">
+            <FileBarChart size={20} className="text-forge-200" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-forge-200">
+              Raid actual
+            </p>
+            <h2 className="mt-1 text-2xl font-black">{raidProgress.raidName}</h2>
+          </div>
+        </div>
         <p className="mt-2 text-sm text-zinc-400">
           Ultimo kill: <span className="font-semibold text-zinc-200">{raidProgress.lastKill}</span> | Progress:{' '}
           <span className="font-semibold text-zinc-200">{raidProgress.currentBoss}</span>
         </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {raidProgress.warcraftLogsProgressUrl && (
+            <a
+              href={raidProgress.warcraftLogsProgressUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-lg border border-ember-400/35 bg-ember-500/15 px-3 py-2 text-sm font-semibold text-forge-200"
+            >
+              WCL Progress <ExternalLink size={14} />
+            </a>
+          )}
+          {raidProgress.warcraftLogsOverviewUrl && (
+            <a
+              href={raidProgress.warcraftLogsOverviewUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm font-semibold text-zinc-200"
+            >
+              Guild Overview <ExternalLink size={14} />
+            </a>
+          )}
+        </div>
       </Card>
 
       <div className="grid grid-cols-3 gap-3">

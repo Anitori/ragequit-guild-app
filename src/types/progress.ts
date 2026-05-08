@@ -24,6 +24,8 @@ export interface RaidProgress {
   nextRaid: string;
   currentBoss: string;
   lastKill: string;
+  warcraftLogsProgressUrl?: string;
+  warcraftLogsOverviewUrl?: string;
   progress: DifficultyProgress[];
   bosses: BossProgress[];
   notices: string[];

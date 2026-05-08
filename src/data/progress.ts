@@ -1,12 +1,18 @@
 import type { RaidProgress } from '../types/progress';
 
-// TODO: Leer progress desde Raider.IO o Blizzard API y enriquecer kills con Warcraft Logs.
+export const warcraftLogsGuildOverviewUrl = 'https://www.warcraftlogs.com/guild/id/702025';
+export const warcraftLogsGuildProgressUrl =
+  'https://www.warcraftlogs.com/guild/progress/702025?zone=46';
+
+// TODO: Leer progress desde Warcraft Logs API/GraphQL con backend u OAuth, no desde scraping client-side.
 export const raidProgress: RaidProgress = {
   raidName: 'Manaforge Omega',
   schedule: 'Martes y miercoles',
   nextRaid: 'Miercoles 21:30 ST',
   currentBoss: 'Boss 3',
   lastKill: 'Boss 2',
+  warcraftLogsProgressUrl: warcraftLogsGuildProgressUrl,
+  warcraftLogsOverviewUrl: warcraftLogsGuildOverviewUrl,
   progress: [
     { difficulty: 'Normal', killed: 8, total: 8 },
     { difficulty: 'Heroic', killed: 7, total: 8 },
@@ -25,7 +31,7 @@ export const raidProgress: RaidProgress = {
       status: 'Muerto',
       difficulty: 'Mythic',
       killDate: '2026-05-01',
-      logUrl: 'https://www.warcraftlogs.com/',
+      logUrl: warcraftLogsGuildProgressUrl,
     },
     {
       id: 'boss-2',
@@ -33,7 +39,7 @@ export const raidProgress: RaidProgress = {
       status: 'Muerto',
       difficulty: 'Mythic',
       killDate: '2026-05-06',
-      logUrl: 'https://www.warcraftlogs.com/',
+      logUrl: warcraftLogsGuildProgressUrl,
     },
     {
       id: 'boss-3',
@@ -41,7 +47,7 @@ export const raidProgress: RaidProgress = {
       status: 'En progreso',
       difficulty: 'Mythic',
       bestTry: '34%',
-      logUrl: 'https://www.warcraftlogs.com/',
+      logUrl: warcraftLogsGuildProgressUrl,
     },
     { id: 'boss-4', name: 'Boss 4', status: 'No intentado' },
     { id: 'boss-5', name: 'Boss 5', status: 'No intentado' },
