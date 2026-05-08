@@ -26,6 +26,8 @@ const quickActions = [
 export function Dashboard({ navigate }: { navigate: Navigate }) {
   const { progress: raidProgress } = useRaidProgress();
   const mythicProgress = raidProgress.progress.find((item) => item.difficulty === 'Mythic');
+  const currentBoss = raidProgress.bosses.find((boss) => boss.name === raidProgress.currentBoss);
+  const currentBossBestTry = currentBoss?.bestTry ?? '-';
   const progressText = raidProgress.progress
     .map((item) => `${item.difficulty} ${item.killed}/${item.total}`)
     .join(' | ');
@@ -97,16 +99,28 @@ export function Dashboard({ navigate }: { navigate: Navigate }) {
       </div>
 
       <Card>
-        <div className="flex items-start justify-between gap-3">
+        <div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-forge-200">
               Estado de raid
             </p>
             <h3 className="mt-1 text-xl font-black">Progress actual</h3>
           </div>
-          <StatusBadge label={raidProgress.lastKill} variant="dead" />
         </div>
         <p className="mt-3 text-sm text-zinc-300">{progressText}</p>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <div className="rounded-lg bg-black/20 p-3">
+            <p className="text-xs text-zinc-400">Ultimo kill</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <StatusBadge label={raidProgress.lastKill} variant="dead" />
+            </div>
+          </div>
+          <div className="rounded-lg bg-black/20 p-3">
+            <p className="text-xs text-zinc-400">Boss en progress</p>
+            <p className="mt-1 font-bold text-zinc-50">{raidProgress.currentBoss}</p>
+            <p className="mt-1 text-xs text-zinc-400">Mejor try: {currentBossBestTry}</p>
+          </div>
+        </div>
         <div className="mt-4 grid grid-cols-3 gap-2">
           {raidProgress.progress.map((item) => (
             <div key={item.difficulty} className="rounded-lg bg-black/20 p-3 text-center">
